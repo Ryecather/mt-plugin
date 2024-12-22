@@ -33,7 +33,8 @@ chrome.runtime.onInstalled.addListener(async function () {
     let lang_list = [
         {"id": "en", "title": "英语", "contexts": ["selection"], "parentId": "pickTranslate"},
         {"id": "zh", "title": "汉语", "contexts": ["selection"], "parentId": "pickTranslate"},
-        {"id": "vi", "title": "越南语", "contexts": ["selection"], "parentId": "pickTranslate"}
+        {"id": "vi", "title": "越南语", "contexts": ["selection"], "parentId": "pickTranslate"},
+        {"id": "ja", "title": "日语", "contexts": ["selection"], "parentId": "pickTranslate"},
     ]
 
     // let resp = await APIQuery('GET', 'languages', null)
@@ -207,9 +208,9 @@ function getSettings(cb) {
  *     content-script注入脚本函数
  *************************************/
 async function doTranslate(sl, tl, ak) {
-    if (window.__ltActive) {  // 正在或已经翻译？
-        return
-    }
+    if (window.__ltActive)  // 正在或已经翻译？
+        return;
+
     window.__ltActive = true
 
     let __nodesToTranslate = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -222,21 +223,23 @@ async function doTranslate(sl, tl, ak) {
     document.title = resp.translatedText
 
     // 处于性能原因，只翻译视窗中可见部分，当视窗改变时，重新扫描DOM进行翻译
-    // document.addEventListener('scroll', translateDom);
     let scrollTimer;
     let resizeTimer;
     let clickTimer;
-    
+
+    // 页面滚动事件
     document.addEventListener('scroll', () => {
         clearTimeout(scrollTimer);
         scrollTimer = setTimeout(translateDom, 200);
     });
-    
+
+    // 页面缩放事件
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(translateDom, 200);
     });
 
+    // 页面点击事件
     window.addEventListener('click', () => {
         clearTimeout(clickTimer);
         clickTimer = setTimeout(translateDom, 200);
@@ -269,8 +272,8 @@ async function doTranslate(sl, tl, ak) {
 
     // 翻译给定节点集
     async function translateNodes(allNodes, sl, tl) {
-        let textRequests = [];
-        let htmlRequests = [];
+        let textRequests = [];  // 文本节点
+        let htmlRequests = [];  // 元素节点
     
         for (let i = 0; i < allNodes.length; i++) {
             let node = allNodes[i];
@@ -315,9 +318,8 @@ async function doTranslate(sl, tl, ak) {
                 let resp = texttranslations[i];
                 let req = textRequests[i];
     
-                if (req.text.length <= 100) {
+                if (req.text.length <= 100)  // 缓存
                     __translationCache[req.text] = resp;
-                }
     
                 req.node.innerText = resp;
                 setNodeTranslated(req.node);
@@ -339,18 +341,18 @@ async function doTranslate(sl, tl, ak) {
                 let resp = htmltranslations[i];
                 let req = htmlRequests[i];
     
-                if (req.text.length <= 200) {
+                if (req.text.length <= 200)  // 缓存
                     __translationCache[req.text] = resp;
-                }
     
                 req.node.innerHTML = resp;
                 setNodeTranslated(req.node);
+
+                // 设置儿子节点翻译标志
                 if (req.node.childNodes) {
                     [...req.node.childNodes].forEach(n => {
                         let tagName = n.tagName ? n.tagName.toLowerCase() : ''
-                        if (n && __nodesToTranslate.includes(tagName)) {
+                        if (n && __nodesToTranslate.includes(tagName))
                             setNodeTranslated(n)
-                        }
                     })
                 }
             }
