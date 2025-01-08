@@ -216,7 +216,7 @@ async function doTranslate(sl, tl, ak) {
     let __nodesToTranslate = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6',
                               'p', 'span', 'div',
                               'li', 'a', 'label', 'figcaption', "button", "header",
-                              'em', "strong", 'b', 'i'];
+                              'em', "strong", 'b', 'i', 'legend'];
     let __translationCache = {};  // 翻译缓存
 
     let resp = await translate(document.title, 'text', sl, tl)   // 翻译标题
@@ -308,8 +308,8 @@ async function doTranslate(sl, tl, ak) {
             let textResponses = await translateBatch(textRequests.map(req => req.text), 'text', sl, tl);
             //alert(textResponses);
             if (textResponses.error) {
-                alert(textResponses.error);
-                location.reload();
+                //alert(textResponses.error);
+                //location.reload();
                 return;
             }
 
@@ -331,8 +331,8 @@ async function doTranslate(sl, tl, ak) {
             let htmlResponses = await translateBatch(htmlRequests.map(req => req.text), 'html', sl, tl);
             //alert(htmlResponses);
             if (htmlResponses.error) {
-                alert(htmlResponses.error);
-                location.reload();
+                //alert(htmlResponses.error);
+                //location.reload();
                 return;
             }
 
