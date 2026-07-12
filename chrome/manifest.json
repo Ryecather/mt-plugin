@@ -31,5 +31,16 @@
         "scripting",
         "webRequest",
         "notifications"
-    ]
+    ],
+    "host_permissions": [
+        "https://fanyi-api.baidu.com/"
+    ],
+    "commands": {
+        "translate-selection": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+T"
+            },
+            "description": "翻译选中文字"
+        }
+    }
 }

@@ -36,5 +36,13 @@
       ],
       "run_at": "document_start"
     }
-  ]
+  ],
+  "commands": {
+    "translate-selection": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+T"
+      },
+      "description": "翻译选中文字"
+    }
+  }
 }

@@ -17,209 +17,432 @@ function showErrorNotification(type, message) {
     }
 }
 
+// ===== 翻译语言列表 =====
+const LANG_LIST = [
+    {"code": "auto", "name": "自动检测"},
+    {"code": "zh", "name": "中文"},
+    {"code": "en", "name": "英语"},
+    {"code": "ja", "name": "日语"},
+    {"code": "jp", "name": "日语"},
+    {"code": "ko", "name": "韩语"},
+    {"code": "kor","name": "韩语"},
+    {"code": "fr", "name": "法语"},
+    {"code": "fra","name": "法语"},
+    {"code": "de", "name": "德语"},
+    {"code": "es", "name": "西班牙语"},
+    {"code": "spa","name": "西班牙语"},
+    {"code": "pt", "name": "葡萄牙语"},
+    {"code": "ru", "name": "俄语"},
+    {"code": "ar", "name": "阿拉伯语"},
+    {"code": "ara","name": "阿拉伯语"},
+    {"code": "vi", "name": "越南语"},
+    {"code": "th", "name": "泰语"},
+    {"code": "it", "name": "意大利语"},
+    {"code": "nl", "name": "荷兰语"},
+    {"code": "pl", "name": "波兰语"},
+    {"code": "tr", "name": "土耳其语"},
+    {"code": "id", "name": "印尼语"},
+    {"code": "ms", "name": "马来语"},
+    {"code": "hi", "name": "印地语"},
+    {"code": "sv", "name": "瑞典语"},
+    {"code": "da", "name": "丹麦语"},
+    {"code": "fi", "name": "芬兰语"},
+    {"code": "no", "name": "挪威语"},
+    {"code": "cs", "name": "捷克语"},
+    {"code": "ro", "name": "罗马尼亚语"},
+    {"code": "hu", "name": "匈牙利语"},
+    {"code": "el", "name": "希腊语"},
+    {"code": "he", "name": "希伯来语"},
+    {"code": "uk", "name": "乌克兰语"},
+    {"code": "fa", "name": "波斯语"},
+];
+
+// ===== 纯 JS MD5（字节级 + UTF-8 编码）=====
+function utf8Bytes(str) {
+    var bytes = [];
+    for (var i = 0; i < str.length; i++) {
+        var c = str.charCodeAt(i);
+        if (c < 128) { bytes.push(c); }
+        else if (c < 2048) { bytes.push(192 | c >> 6, 128 | c & 63); }
+        else if (c < 55296 || c >= 57344) { bytes.push(224 | c >> 12, 128 | c >> 6 & 63, 128 | c & 63); }
+        else { i++; var c2 = str.charCodeAt(i); c = 65536 + ((c & 1023) << 10) + (c2 & 1023); bytes.push(240 | c >> 18, 128 | c >> 12 & 63, 128 | c >> 6 & 63, 128 | c & 63); }
+    }
+    return bytes;
+}
+
+var MD5 = (function () {
+    function add32(a, b) { var lsw = (a & 0xFFFF) + (b & 0xFFFF); var msw = (a >> 16) + (b >> 16) + (lsw >> 16); return (msw << 16) | (lsw & 0xFFFF); }
+    function cmn(q, a, b, x, s, t) { return add32((add32(add32(a, q), add32(x, t)) << s) | (add32(add32(a, q), add32(x, t)) >>> (32 - s)), b); }
+    function ff(a, b, c, d, x, s, t) { return cmn((b & c) | ((~b) & d), a, b, x, s, t); }
+    function gg(a, b, c, d, x, s, t) { return cmn((b & d) | (c & (~d)), a, b, x, s, t); }
+    function hh(a, b, c, d, x, s, t) { return cmn(b ^ c ^ d, a, b, x, s, t); }
+    function ii(a, b, c, d, x, s, t) { return cmn(c ^ (b | (~d)), a, b, x, s, t); }
+
+    function md5Cycle(state, words) {
+        var a = state[0], b = state[1], c = state[2], d = state[3];
+        a = ff(a, b, c, d, words[0],  7,  -680876936); d = ff(d, a, b, c, words[1],  12, -389564586); c = ff(c, d, a, b, words[2],  17,  606105819);
+        b = ff(b, c, d, a, words[3],  22, -1044525330); a = ff(a, b, c, d, words[4],  7,  -176418897); d = ff(d, a, b, c, words[5],  12,  1200080426);
+        c = ff(c, d, a, b, words[6],  17, -1473231341); b = ff(b, c, d, a, words[7],  22, -45705983);  a = ff(a, b, c, d, words[8],  7,   1770035416);
+        d = ff(d, a, b, c, words[9],  12, -1958414417); c = ff(c, d, a, b, words[10], 17, -42063);     b = ff(b, c, d, a, words[11], 22, -1990404162);
+        a = ff(a, b, c, d, words[12], 7,   1804603682); d = ff(d, a, b, c, words[13], 12, -40341101);  c = ff(c, d, a, b, words[14], 17, -1502002290);
+        b = ff(b, c, d, a, words[15], 22,  1236535329); a = gg(a, b, c, d, words[1],  5,  -165796510); d = gg(d, a, b, c, words[6],  9,  -1069501632);
+        c = gg(c, d, a, b, words[11], 14,  643717713);  b = gg(b, c, d, a, words[0],  20, -373897302); a = gg(a, b, c, d, words[5],  5,  -701558691);
+        d = gg(d, a, b, c, words[10], 9,   38016083);   c = gg(c, d, a, b, words[15], 14, -660478335); b = gg(b, c, d, a, words[4],  20, -405537848);
+        a = gg(a, b, c, d, words[9],  5,   568446438);  d = gg(d, a, b, c, words[14], 9,  -1019803690); c = gg(c, d, a, b, words[3],  14, -187363961);
+        b = gg(b, c, d, a, words[8],  20,  1163531501); a = gg(a, b, c, d, words[13], 5,  -1444681467); d = gg(d, a, b, c, words[2],  9,  -51403784);
+        c = gg(c, d, a, b, words[7],  14,  1735328473); b = gg(b, c, d, a, words[12], 20, -1926607734); a = hh(a, b, c, d, words[5],  4,  -378558);
+        d = hh(d, a, b, c, words[8],  11, -2022574463); c = hh(c, d, a, b, words[11], 16,  1839030562); b = hh(b, c, d, a, words[14], 23, -35309556);
+        a = hh(a, b, c, d, words[1],  4,  -1530992060); d = hh(d, a, b, c, words[4],  11,  1272893353); c = hh(c, d, a, b, words[7],  16, -155497632);
+        b = hh(b, c, d, a, words[10], 23, -1094730640); a = hh(a, b, c, d, words[13], 4,   681279174);  d = hh(d, a, b, c, words[0],  11, -358537222);
+        c = hh(c, d, a, b, words[3],  16, -722521979);  b = hh(b, c, d, a, words[6],  23,  76029189);  a = hh(a, b, c, d, words[9],  4,  -640364487);
+        d = hh(d, a, b, c, words[12], 11, -421815835);  c = hh(c, d, a, b, words[15], 16,  530742520);  b = hh(b, c, d, a, words[2],  23, -995338651);
+        a = ii(a, b, c, d, words[0],  6,  -198630844);  d = ii(d, a, b, c, words[7],  10,  1126891415); c = ii(c, d, a, b, words[14], 15, -1416354905);
+        b = ii(b, c, d, a, words[5],  21, -57434055);   a = ii(a, b, c, d, words[12], 6,   1700485571); d = ii(d, a, b, c, words[3],  10, -1894986606);
+        c = ii(c, d, a, b, words[10], 15, -1051523);    b = ii(b, c, d, a, words[1],  21, -2054922799); a = ii(a, b, c, d, words[8],  6,   1873313359);
+        d = ii(d, a, b, c, words[15], 10, -30611744);   c = ii(c, d, a, b, words[6],  15, -1560198380); b = ii(b, c, d, a, words[13], 21,  1309151649);
+        a = ii(a, b, c, d, words[4],  6,  -145523070);  d = ii(d, a, b, c, words[11], 10, -1120210379); c = ii(c, d, a, b, words[2],  15,  718787259);
+        b = ii(b, c, d, a, words[9],  21, -343485551);
+        state[0] = add32(a, state[0]); state[1] = add32(b, state[1]); state[2] = add32(c, state[2]); state[3] = add32(d, state[3]);
+    }
+
+    function bytesToWords(bytes, off) {
+        var words = [];
+        for (var i = 0; i < 16; i++) words[i] = bytes[off + i * 4] | (bytes[off + i * 4 + 1] << 8) | (bytes[off + i * 4 + 2] << 16) | (bytes[off + i * 4 + 3] << 24);
+        return words;
+    }
+
+    function md5(arr) {
+        var state = [1732584193, -271733879, -1732584194, 271733878];
+        var len = arr.length;
+        var paddedLen = ((len + 8) >>> 6) + 1;
+        var padded = new Array(paddedLen * 64);
+        for (var i = 0; i < len; i++) padded[i] = arr[i];
+        padded[len] = 0x80;
+        for (var i = len + 1; i < paddedLen * 64 - 8; i++) padded[i] = 0;
+        var bits = len * 8;
+        var off = paddedLen * 64 - 8;
+        padded[off] = bits & 0xFF;
+        padded[off + 1] = (bits >>> 8) & 0xFF;
+        padded[off + 2] = (bits >>> 16) & 0xFF;
+        padded[off + 3] = (bits >>> 24) & 0xFF;
+
+        for (var i = 0; i < paddedLen; i++) md5Cycle(state, bytesToWords(padded, i * 64));
+
+        function hex(n) {
+            var u = n >>> 0;
+            var h = '0123456789abcdef';
+            return h.charAt(u >>> 4 & 0xF) + h.charAt(u & 0xF)
+                 + h.charAt(u >>> 12 & 0xF) + h.charAt(u >>> 8 & 0xF)
+                 + h.charAt(u >>> 20 & 0xF) + h.charAt(u >>> 16 & 0xF)
+                 + h.charAt(u >>> 28 & 0xF) + h.charAt(u >>> 24 & 0xF);
+        }
+        return hex(state[0]) + hex(state[1]) + hex(state[2]) + hex(state[3]);
+    }
+    return function (s) { return md5(utf8Bytes(s)); };
+})();
+
+// ===== 百度翻译 API =====
+var BAIDU_API = 'https://fanyi-api.baidu.com/api/trans/vip/translate';
+
+function toBaiduLang(code) {
+    var map = {
+        'auto': 'auto', 'zh-CN': 'zh', 'zh-TW': 'cht', 'zh': 'zh',
+        'en': 'en', 'ja': 'jp', 'jp': 'jp', 'ko': 'kor', 'kor': 'kor',
+        'fr': 'fra', 'fra': 'fra', 'de': 'de', 'es': 'spa', 'spa': 'spa',
+        'pt': 'pt', 'ru': 'ru', 'ar': 'ara', 'ara': 'ara', 'vi': 'vi',
+        'th': 'th', 'it': 'it', 'nl': 'nl', 'pl': 'pl', 'tr': 'tr',
+        'id': 'id', 'ms': 'ms', 'hi': 'hi',
+    };
+    return map[code] || (code || '');
+}
+
+async function translateWithBaidu(text, source, target) {
+    if (!text) return { translatedText: '' };
+
+    var settings = await getSettingsAsync();
+    var appid = settings['baidu-appid'] || '';
+    var secretKey = settings['baidu-secret'] || '';
+    if (!appid || !secretKey) throw new Error('请先在设置中填写百度 APP ID 和 Secret Key');
+
+    var srcLang = toBaiduLang(source) || 'auto';
+    var tgtLang = toBaiduLang(target);
+    if (!tgtLang) throw new Error('目标语言不能为空');
+
+    var salt = String(Date.now());
+    var sign = MD5(appid + text + salt + secretKey);
+
+    var body = 'q=' + encodeURIComponent(text)
+        + '&from=' + srcLang
+        + '&to=' + tgtLang
+        + '&appid=' + appid
+        + '&salt=' + salt
+        + '&sign=' + sign;
+
+    var resp = await fetch(BAIDU_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body
+    });
+    if (!resp.ok) throw new Error('Baidu HTTP ' + resp.status);
+    var data = await resp.json();
+    if (data.error_code) {
+        throw new Error('Baidu error ' + data.error_code + ': ' + (data.error_msg || ''));
+    }
+    var translated = '';
+    if (data.trans_result && data.trans_result.length > 0) {
+        translated = data.trans_result.map(function (r) { return r.dst; }).join('');
+    }
+    return { translatedText: translated };
+}
+
+async function batchTranslateWithBaidu(texts, source, target) {
+    var results = new Array(texts.length);
+    for (var i = 0; i < texts.length; i++) {
+        try {
+            var r = await translateWithBaidu(texts[i], source, target);
+            results[i] = r.translatedText;
+        } catch(e) {
+            results[i] = texts[i];
+        }
+        if (i < texts.length - 1) await sleep(1000);
+    }
+    return { translatedText: results };
+}
+
+function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+
+async function doTranslateRequest(text, source, target, format, apiKey) {
+    var settings = await getSettingsAsync();
+    var provider = settings['provider'] || 'baidu';
+
+    if (provider === 'custom') {
+        var endpoint = settings['api-endpoint'];
+        if (!endpoint.endsWith('/')) endpoint += '/';
+        var resp = await fetch(endpoint + "translate", {
+            method: "POST",
+            body: JSON.stringify({
+                q: text, source: source, target: target,
+                format: format, api_key: apiKey
+            }),
+            headers: { "Content-Type": "application/json" }
+        });
+        return resp.json();
+    }
+
+    if (Array.isArray(text)) {
+        return batchTranslateWithBaidu(text, source, target);
+    } else {
+        return translateWithBaidu(text, source, target);
+    }
+}
+
+// 右键菜单
 var menuItem = {
     "id": "translate",
     "title": "翻译",
     "contexts": ["selection"]
-}
+};
 chrome.contextMenus.create(menuItem);
 
 chrome.runtime.onInstalled.addListener(async function () {
-    let resp = await APIQuery('GET', 'languages', null)
-    console.log(resp)
-    console.log(typeof (resp))
-    for (lang of resp) {
-        var menuItem = {
-            "id": lang.code,
-            "title": lang.cname,
+    var commonLangs = [
+        {id: "zh", title: "中文"},
+        {id: "en", title: "英语"},
+        {id: "ja", title: "日语"},
+        {id: "ko", title: "韩语"},
+        {id: "fr", title: "法语"},
+        {id: "de", title: "德语"},
+        {id: "es", title: "西班牙语"},
+        {id: "ru", title: "俄语"},
+        {id: "vi", title: "越南语"},
+        {id: "th", title: "泰语"},
+        {id: "ar", title: "阿拉伯语"},
+        {id: "pt", title: "葡萄牙语"},
+    ];
+
+    for (var i = 0; i < commonLangs.length; i++) {
+        chrome.contextMenus.create({
+            "id": commonLangs[i].id,
+            "title": commonLangs[i].name,
             "contexts": ["selection"],
             "parentId": "translate"
-        }
-        chrome.contextMenus.create(menuItem);
+        });
     }
-})
+});
+
+// 快捷键
+browser.commands.onCommand.addListener(async function (command) {
+    if (command === 'translate-selection') {
+        var tabs = await browser.tabs.query({ active: true, currentWindow: true });
+        if (!tabs || tabs.length === 0) return;
+
+        try {
+            var resp = await browser.tabs.sendMessage(tabs[0].id, { todo: 'getSelection' });
+            if (!resp || !resp.text) return;
+
+            var settings = await getSettingsAsync();
+            var tgt = settings['default-lang'] || 'zh';
+
+            var result = await doTranslateRequest(resp.text, 'auto', tgt, 'text', '');
+            if (!result.error) {
+                browser.tabs.sendMessage(tabs[0].id, { todo: 'translate', result: result.translatedText });
+            }
+        } catch (e) {
+            console.log('Shortcut translate failed:', e.message);
+        }
+    }
+});
 
 chrome.contextMenus.onClicked.addListener(async function (clickData) {
     if (clickData.selectionText) {
-        // clickData.menuItemId : 被点击的菜单选项卡id
-        // clickData.selectionText: 选中的内容
-        var transword = clickData.selectionText
-        var source_lang = 'auto'
-        var target_lang = clickData.menuItemId
-        chrome.storage.local.get('settings', async function (data) {
-            if (!data.settings) {
-                var defaultsettings = {
-                    'api-endpoint': 'http://127.0.0.1:5555/',
-                    'api-key': ""
-                }
-                data.settings = defaultsettings;
-            }
-            var ak = data.settings['api-key'];
-            if(typeof ak === 'undefined'){
-                ak = "";
-            }
-            var endpoint = data.settings['api-endpoint'];
-            if (endpoint.charAt(endpoint.length - 1) !== '/') {
-                endpoint += '/';
-            }
-            console.log(ak);
-            const res = await fetch(endpoint+"translate", {
-                method: "POST",
-                body: JSON.stringify({ q: transword, source: source_lang, target: target_lang, format: "text", api_key: ak }),
-                headers: { "Content-Type": "application/json" }
-            }).catch(function (err) {
-                console.log(err)
-                // chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-                //     chrome.tabs.sendMessage(tabs[0].id, { todo: "failed" ,message: err.message})
-                // })
-                showErrorNotification("connect failed", "Translation error: " + err);
-            });
-            console.log(res);
-            trans_json = await res.json();
+        var transword = clickData.selectionText;
+        var target_lang = clickData.menuItemId;
+
+        try {
+            var trans_json = await doTranslateRequest(transword, 'auto', target_lang, "text", "");
+
             if (trans_json.error) {
-                showErrorNotification("translate error","Translation failed: " + trans_json.error);
+                showErrorNotification("translate error", "Translation failed: " + trans_json.error);
             } else {
-                console.log(trans_json.translatedText)
+                console.log(trans_json.translatedText);
                 chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-                    chrome.tabs.sendMessage(tabs[0].id, { todo: "translate", result: trans_json.translatedText })
-                })
+                    chrome.tabs.sendMessage(tabs[0].id, { todo: "translate", result: trans_json.translatedText });
+                });
             }
-        })
+        } catch (err) {
+            console.log(err);
+            showErrorNotification("translate error", "Translation failed: " + err.message);
+        }
     }
-})
+});
 
 browser.runtime.onMessage.addListener(
-
     function (request, sender, sendResponse) {
-        console.log('request service')
+        console.log('request service');
         if (request.action === "translate") {
             if (request.sl === "ar") {
                 chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-                    chrome.tabs.sendMessage(tabs[0].id, { todo: "change" })
-                })
+                    chrome.tabs.sendMessage(tabs[0].id, { todo: "change" });
+                });
             }
-            let jsn = APIQuery('POST', 'translate',
-                JSON.stringify({
-                    q: request.text,
-                    source: request.sl,
-                    target: request.tl,
-                    format: request.type,
-                    api_key: request.ak
-                })).then(function (jsn) {
-                    // sendResponse({ type: request.type, text: jsn.translatedText });
+
+            var ak = request.ak || "";
+            doTranslateRequest(request.text, request.sl, request.tl, request.type, ak)
+                .then(function (jsn) {
                     if(jsn.error){
                         showErrorNotification("translate fail", "Translation failed: " + jsn.error);
                     }else{
                         sendResponse({ type: request.type, text: jsn.translatedText });
                     }
-                })    
+                })
+                .catch(function (err) {
+                    showErrorNotification("translate fail", "Translation failed: " + err.message);
+                });
+
             return true;
         }
         if (request.action === "inject") {
-
             browser.tabs.query({ active: true }).then(function (tabId) {
-                console.log(tabId)
-                browser.scripting.executeScript(
-                    {
-                        target: { tabId: tabId[0].id },
-                        func: doTranslate,
-                        args: [request.sl, request.tl, request.api_key],
-                    },
-                );
-                sendResponse(null)
-            })
-
+                console.log(tabId);
+                browser.scripting.executeScript({
+                    target: { tabId: tabId[0].id },
+                    func: doTranslate,
+                    args: [request.sl, request.tl, request.api_key],
+                });
+                sendResponse(null);
+            });
         }
         if (request.action === "detect-lang") {
             browser.i18n.detectLanguage(request.text).then(function (info) {
-                sendResponse(info)
+                sendResponse(info);
             });
         }
-        return true
+        return true;
     }
-
 );
 
-
 function APIQuery(method, route, body) {
-
     return new Promise(function (resolve, reject) {
         getSettings(function (data) {
             fetch(data.settings['api-endpoint'] + route, {
                 method: method,
                 body: body,
                 headers: { "Content-Type": "application/json" }
-            }).then(function (res) {
-                res.json().then(function (jsn) {
-                    resolve(jsn)
-                }).catch(function (err) {
-                    reject(err)
-                })
-            }).catch(function (err) {
-                reject(err)
+            })
+            .then(function (res) {
+                res.json().then(function (jsn) { resolve(jsn); })
+                    .catch(function (err) { reject(err); });
+            })
+            .catch(function (err) {
+                reject(err);
                 showErrorNotification("request failed", "Translation failed: " + err);
             });
-        })
-    })
+        });
+    });
 }
-
 
 function getSettings(cb) {
     chrome.storage.local.get('settings', function (data) {
         if (!data.settings) {
-            let defaultsettings = {
+            var defaults = {
+                'provider': 'baidu',
                 'api-endpoint': 'http://127.0.0.1:5555/',
-                'api-key': ""
-            }
-            cb({ settings: defaultsettings })
-            return
+                'api-key': '',
+                'default-lang': 'zh',
+                'baidu-appid': '',
+                'baidu-secret': ''
+            };
+            cb({ settings: defaults });
+            return;
         }
-        let settings = data.settings;
-        if (!settings['api-endpoint'].endsWith('/')) {
-            settings['api-endpoint'] += '/';
+        var s = data.settings;
+        if (!s['api-endpoint'] || !s['api-endpoint'].endsWith('/')) {
+            s['api-endpoint'] = (s['api-endpoint'] || 'http://127.0.0.1:5555/');
+            if (!s['api-endpoint'].endsWith('/')) s['api-endpoint'] += '/';
         }
-        // cb(data)
-        cb({ settings: settings });
-    })
+        if (!s['provider']) s['provider'] = 'baidu';
+        if (!s['default-lang']) s['default-lang'] = 'zh';
+        if (!s['baidu-appid']) s['baidu-appid'] = '';
+        if (!s['baidu-secret']) s['baidu-secret'] = '';
+        cb({ settings: s });
+    });
+}
+
+function getSettingsAsync() {
+    return new Promise(function (resolve) {
+        getSettings(function (data) { resolve(data.settings); });
+    });
 }
 
 
 async function doTranslate(sl, tl, ak) {
+    if (window.__ltActive) return;
+    window.__ltActive = true;
 
-    if (window.__ltActive) {
-        return
+    var __nodesToTranslate = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'li', 'td', 'th'];
+    var __translationCache = {};
+
+    if (document.title && document.title.trim()) {
+        var resp = await translate(document.title, 'text', sl, tl);
+        if (resp && resp.text) document.title = resp.text;
     }
-    window.__ltActive = true
 
-    let __nodesToTranslate = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div', 'li', 'b', 'i', 'a', 'label', 'figcaption', 'em'];
-    let __translationCache = {};
+    var scrollTimer, resizeTimer;
 
-    let resp = await translate(document.title, 'text', sl, tl)
-    document.title = resp.text
-
-    /* we only translate elements visible in the viewport for performance reasons
-    rescan the dom for elements to translate if the viewport changes */
-    let scrollTimer;
-    let resizeTimer;
-    
-    document.addEventListener('scroll', () => {
+    document.addEventListener('scroll', function () {
         clearTimeout(scrollTimer);
         scrollTimer = setTimeout(translateDom, 200);
     });
-    
-    window.addEventListener('resize', () => {
+
+    window.addEventListener('resize', function () {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(translateDom, 200);
     });
-    
+
     translateDom();
 
     async function translateDom() {
-        nodes = findtranslatableElements();
-        /* the api server understand "auto" and can guess the source language too
-        but we send small fragments and so sometimes it lacks info.
-        we have the info in the browser where we can look at more text and then
-        just set the language so small fragments are properly translated too. */
+        var nodes = findtranslatableElements();
         if (sl == 'auto') {
             sl = await detectLanguage(nodes);
         }
@@ -227,48 +450,31 @@ async function doTranslate(sl, tl, ak) {
     }
 
     async function detectLanguage(nodes) {
-        let langfreqmap = {};
-        for (let node of nodes) {
-            let resp = await chrome.runtime.sendMessage({ action: "detect-lang", text: node.innerText });
-            console.log(resp)
+        var langfreqmap = {};
+        for (var i = 0; i < nodes.length; i++) {
+            var node = nodes[i];
+            var resp = await chrome.runtime.sendMessage({ action: "detect-lang", text: node.innerText });
+            console.log(resp);
             if (resp.languages.length >= 1) {
-                let lang = resp.languages[0].language
-                if (!langfreqmap[lang]) {
-                    langfreqmap[lang] = 0
-                }
-                //weight each guess by length of text and certainty
-                langfreqmap[lang] += (node.innerText.length * (resp.languages[0].percentage / 100))
+                var lang = resp.languages[0].language;
+                if (!langfreqmap[lang]) langfreqmap[lang] = 0;
+                langfreqmap[lang] += (node.innerText.length * (resp.languages[0].percentage / 100));
             }
         }
-        let detectedlang = '';
-        let detectscore = 0;
-        for (var key of Object.keys(langfreqmap)) {
+        var detectedlang = '';
+        var detectscore = 0;
+        for (var key in langfreqmap) {
             if (langfreqmap[key] > detectscore) {
-                detectedlang = key
-                detectscore = langfreqmap[key]
+                detectedlang = key;
+                detectscore = langfreqmap[key];
             }
         }
-        if (detectedlang == '') {
-            detectLanguage = 'auto'
-        }
-
-        return detectedlang
+        if (detectedlang == '') detectedlang = 'auto';
+        return detectedlang;
     }
-
-    // the docs *say* runtime.sendMessage does promises,
-    // but it doesnt?! so we just wrap it so we can await it.
-    /*
-    function sendMessage(message) {
-        return new Promise(function (resolve, reject) {
-            chrome.runtime.sendMessage(message, function (resp) {
-                resolve(resp)
-            })
-        })
-    }
-    */
 
     async function translateBatch(texts, type, sl, tl) {
-        let responses = await chrome.runtime.sendMessage({
+        var responses = await chrome.runtime.sendMessage({
             action: "translate",
             type: type,
             text: texts,
@@ -276,253 +482,182 @@ async function doTranslate(sl, tl, ak) {
             tl: tl,
             ak: ak
         });
-        console.log(responses)
+        console.log(responses);
         return responses;
     }
+
     async function translateNodes(allNodes, sl, tl) {
-        let textRequests = [];
-        let htmlRequests = [];
-    
-        for (let i = 0; i < allNodes.length; i++) {
-            let node = allNodes[i];
-    
+        var textRequests = [];
+        var htmlRequests = [];
+
+        for (var i = 0; i < allNodes.length; i++) {
+            var node = allNodes[i];
+
             if (node.innerHTML == node.innerText) {
                 if (node.innerText.length <= 100 && __translationCache[node.innerText]) {
                     node.innerText = __translationCache[node.innerText];
                     setNodeTranslated(node);
                     continue;
                 }
-    
-                textRequests.push({
-                    text: node.innerText,
-                    node: node
-                });
+                textRequests.push({ text: node.innerText, node: node });
             } else {
                 if (node.innerHTML.length <= 200 && __translationCache[node.innerHTML]) {
                     node.innerHTML = __translationCache[node.innerHTML];
                     setNodeTranslated(node);
                     continue;
                 }
-    
-                htmlRequests.push({
-                    text: node.innerHTML,
-                    node: node
-                });
+                htmlRequests.push({ text: node.innerHTML, node: node });
             }
         }
-    
+
         if (textRequests.length > 0) {
-            let textResponses = await translateBatch(textRequests.map(req => req.text), 'text', sl, tl);
-            let texttranslations = textResponses.text;
-            for (let i = 0; i < texttranslations.length; i++) {
-                let resp = texttranslations[i];
-                let req = textRequests[i];
-    
-                if (req.text.length <= 100) {
-                    __translationCache[req.text] = resp;
-                }
-    
-                req.node.innerText = resp;
+            var textResponses = await translateBatch(textRequests.map(function (r) { return r.text; }), 'text', sl, tl);
+            var texttranslations = textResponses.text;
+            for (var i = 0; i < texttranslations.length; i++) {
+                var respText = texttranslations[i];
+                var req = textRequests[i];
+                if (req.text.length <= 100) __translationCache[req.text] = respText;
+                req.node.innerText = respText;
                 setNodeTranslated(req.node);
             }
         }
-    
+
         if (htmlRequests.length > 0) {
-            let htmlResponses = await translateBatch(htmlRequests.map(req => req.text), 'html', sl, tl);
-            let htmltranslations = htmlResponses.text;
-            for (let i = 0; i < htmltranslations.length; i++) {
-                let resp = htmltranslations[i];
-                let req = htmlRequests[i];
-    
-                if (req.text.length <= 200) {
-                    __translationCache[req.text] = resp;
-                }
-    
-                req.node.innerHTML = resp;
-                setNodeTranslated(req.node);
-                if (req.node.childNodes) {
-                    [...req.node.childNodes].forEach(n => {
-                        let tagName = n.tagName ? n.tagName.toLowerCase() : ''
-                        if (n && __nodesToTranslate.includes(tagName)) {
-                            setNodeTranslated(n)
-                        }
-                    })
+            var htmlResponses = await translateBatch(htmlRequests.map(function (r) { return r.text; }), 'html', sl, tl);
+            var htmltranslations = htmlResponses.text;
+            for (var i = 0; i < htmltranslations.length; i++) {
+                var respHtml = htmltranslations[i];
+                var reqHtml = htmlRequests[i];
+                if (reqHtml.text.length <= 200) __translationCache[reqHtml.text] = respHtml;
+                reqHtml.node.innerHTML = respHtml;
+                setNodeTranslated(reqHtml.node);
+                if (reqHtml.node.childNodes) {
+                    [].slice.call(reqHtml.node.childNodes).forEach(function (n) {
+                        var tagName = n.tagName ? n.tagName.toLowerCase() : '';
+                        if (n && __nodesToTranslate.indexOf(tagName) !== -1) setNodeTranslated(n);
+                    });
                 }
             }
         }
     }
-    //表示节点已翻译
-    function setNodeTranslated(node) {
-        node.dataset.__ltTranslated = 'true'
-    }
-    //判断节点是否已翻译
-    function getNodeTranslated(node) {
-        return node.dataset.__ltTranslated === 'true'
-    }
-    //将节点加入队列中
-    function setNodeQueued(node) {
-        node.dataset.__ltQueued = 'true'
-    }
-    //检测节点是否在队列中
-    function getNodeQueued(node) {
-        return node.dataset.__ltQueued === 'true'
-    }
+
+    function setNodeTranslated(node) { node.dataset.__ltTranslated = 'true'; }
+    function getNodeTranslated(node) { return node.dataset.__ltTranslated === 'true'; }
+    function setNodeQueued(node) { node.dataset.__ltQueued = 'true'; }
+    function getNodeQueued(node) { return node.dataset.__ltQueued === 'true'; }
 
     function findtranslatableElements() {
-        let allNodes = [];
+        var allNodes = [];
 
-        for (tagName of __nodesToTranslate) {
-            let nodeList = document.getElementsByTagName(tagName);
-            let nodes = Array.prototype.slice.call(nodeList);
-            nodes = filterTranslatable(nodes)
-            nodes = filterHidden(nodes)
-            nodes = filterInViewport(nodes)
-            nodes = filterTranslated(nodes)
-            nodes = filterQueued(nodes)
+        for (var ti = 0; ti < __nodesToTranslate.length; ti++) {
+            var tagName = __nodesToTranslate[ti];
+            var nodeList = document.getElementsByTagName(tagName);
+            var nodes = [].slice.call(nodeList);
+            nodes = filterTranslatable(nodes);
+            nodes = filterHidden(nodes);
+            nodes = filterInViewport(nodes);
+            nodes = filterTranslated(nodes);
+            nodes = filterQueued(nodes);
 
-            for (n of nodes) {
-                setNodeQueued(n)
-            }
-
-            allNodes = allNodes.concat(nodes)
+            for (var ni = 0; ni < nodes.length; ni++) setNodeQueued(nodes[ni]);
+            allNodes = allNodes.concat(nodes);
         }
 
-        allNodes = filterChilds(allNodes)
+        allNodes = filterChilds(allNodes);
 
         allNodes.sort(function (a, b) {
-            let ab = a.getBoundingClientRect();
-            let bb = b.getBoundingClientRect();
-
-            return ab.top - bb.top
+            return a.getBoundingClientRect().top - b.getBoundingClientRect().top;
         });
 
-        return allNodes
+        return allNodes;
     }
 
     function filterQueued(nodes) {
-        unqueuedNodes = [];
-
-        for (let i = 0; i < nodes.length; i++) {
-            let node = nodes[i]
-            if (!getNodeQueued(node)) {
-                unqueuedNodes.push(node)
-            }
+        var result = [];
+        for (var i = 0; i < nodes.length; i++) {
+            if (!getNodeQueued(nodes[i])) result.push(nodes[i]);
         }
-        return unqueuedNodes
+        return result;
     }
 
     function filterTranslated(nodes) {
-        translatedNodes = [];
-
-        for (let i = 0; i < nodes.length; i++) {
-            let node = nodes[i]
-            if (!getNodeTranslated(node)) {
-                translatedNodes.push(node)
-            }
+        var result = [];
+        for (var i = 0; i < nodes.length; i++) {
+            if (!getNodeTranslated(nodes[i])) result.push(nodes[i]);
         }
-        return translatedNodes
+        return result;
     }
 
     function filterInViewport(nodes) {
-        viewportNodes = [];
-
-        for (let i = 0; i < nodes.length; i++) {
-            let node = nodes[i]
-            if (isInViewport(node)) {
-                viewportNodes.push(node)
-            }
+        var result = [];
+        for (var i = 0; i < nodes.length; i++) {
+            if (isInViewport(nodes[i])) result.push(nodes[i]);
         }
-        return viewportNodes
+        return result;
     }
 
     function isInViewport(node) {
-        let bounding = node.getBoundingClientRect();
+        var bounding = node.getBoundingClientRect();
         return (
             bounding.top >= 0 &&
             bounding.left >= 0 &&
-            /* multiply viewport height by 1.5 so when scrolling down, the just-in-time translation isn't as noticable.
-            as we will have half a viewport already translated. this is kinda bad if there a large image you scroll past fast.
-            but it's better than nothing, for now. */
             bounding.top <= (window.innerHeight || document.documentElement.clientHeight) * 1.5 &&
             bounding.left <= (window.innerWidth || document.documentElement.clientWidth)
         );
     }
 
     function filterTranslatable(nodes) {
-        var translateableNodes = [];
-
-        for (let i = 0; i < nodes.length; i++) {
-            let node = nodes[i]
-            if (hasTranslateableText(node)) {
-                translateableNodes.push(node)
-            }
+        var result = [];
+        for (var i = 0; i < nodes.length; i++) {
+            if (hasTranslateableText(nodes[i])) result.push(nodes[i]);
         }
-        return translateableNodes
+        return result;
     }
 
     function hasTranslateableText(node) {
-        if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim() != "") {
-            return true
-        }
-        node = node.firstChild
+        if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim() != "") return true;
+        node = node.firstChild;
         while (node) {
-            if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim() != "") {
-                return true
-            }
-            node = node.nextSibling
+            if (node.nodeType === Node.TEXT_NODE && node.nodeValue.trim() != "") return true;
+            node = node.nextSibling;
         }
-        return false
+        return false;
     }
 
     function filterHidden(nodes) {
-        visibleNodes = [];
-        function isHidden(el) {
-            return (el.offsetParent === null)
+        var result = [];
+        function isHidden(el) { return (el.offsetParent === null); }
+        for (var i = 0; i < nodes.length; i++) {
+            if (!isHidden(nodes[i])) result.push(nodes[i]);
         }
-
-        for (let i = 0; i < nodes.length; i++) {
-            let node = nodes[i]
-            if (!isHidden(node)) {
-                visibleNodes.push(node)
-            }
-        }
-        return visibleNodes
+        return result;
     }
 
     function filterChilds(nodes) {
-        topLevelNodes = [];
-
-        for (let i = 0; i < nodes.length; i++) {
-            let child = nodes[i]
-            var node = child
-            var found = false
+        var result = [];
+        for (var i = 0; i < nodes.length; i++) {
+            var child = nodes[i];
+            var node = child;
+            var found = false;
             while (node.parentNode) {
-                node = node.parentNode
-
-                //we're a child of another node in the list
-                if (includesNode(nodes, node)) {
-                    found = true
-                    break;
-                }
+                node = node.parentNode;
+                if (indexOfNode(nodes, node)) { found = true; break; }
             }
-            if (!found) {
-                topLevelNodes.push(child);
-            }
+            if (!found) result.push(child);
         }
-        return topLevelNodes
+        return result;
     }
 
-    function includesNode(haystack, needle) {
-        for (n of haystack) {
-            if (needle.isSameNode(n)) {
-                return true
-            }
+    function indexOfNode(haystack, needle) {
+        for (var i = 0; i < haystack.length; i++) {
+            if (needle.isSameNode(haystack[i])) return true;
         }
-        return false
+        return false;
     }
 
     async function translate(txt, type, sl, tl) {
-        let resp = await browser.runtime.sendMessage({ action: "translate", type: type, text: txt, sl: sl, tl: tl, ak: ak })
-        return resp
+        return await browser.runtime.sendMessage({
+            action: "translate", type: type, text: txt, sl: sl, tl: tl, ak: ak
+        });
     }
 }
