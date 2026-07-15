@@ -156,8 +156,8 @@ function toBaiduLang(code) {
     return map[code] || (code || '');
 }
 
-async function translateWithBaidu(text, source, target) {
-    if (!text) return { translatedText: '' };
+async function translateWithBaidu(texts, source, target) {
+    if (!texts || (Array.isArray(texts) && texts.length === 0)) return { translatedText: [] };
 
     var settings = await getSettingsAsync();
     var appid = settings['baidu-appid'] || '';
@@ -168,10 +168,11 @@ async function translateWithBaidu(text, source, target) {
     var tgtLang = toBaiduLang(target);
     if (!tgtLang) throw new Error('目标语言不能为空');
 
+    var rawText = Array.isArray(texts) ? texts.join('\n') : texts;
     var salt = String(Date.now());
-    var sign = MD5(appid + text + salt + secretKey);
+    var sign = MD5(appid + rawText + salt + secretKey);
 
-    var body = 'q=' + encodeURIComponent(text)
+    var body = 'q=' + encodeURIComponent(rawText)
         + '&from=' + srcLang
         + '&to=' + tgtLang
         + '&appid=' + appid
@@ -188,28 +189,16 @@ async function translateWithBaidu(text, source, target) {
     if (data.error_code) {
         throw new Error('Baidu error ' + data.error_code + ': ' + (data.error_msg || ''));
     }
-    var translated = '';
+
     if (data.trans_result && data.trans_result.length > 0) {
-        translated = data.trans_result.map(function (r) { return r.dst; }).join('');
-    }
-    return { translatedText: translated };
-}
-
-async function batchTranslateWithBaidu(texts, source, target) {
-    var results = new Array(texts.length);
-    for (var i = 0; i < texts.length; i++) {
-        try {
-            var r = await translateWithBaidu(texts[i], source, target);
-            results[i] = r.translatedText;
-        } catch(e) {
-            results[i] = texts[i];
+        var translated = data.trans_result.map(function (r) { return r.dst; });
+        if (Array.isArray(texts)) {
+            return { translatedText: translated };
         }
-        if (i < texts.length - 1) await sleep(1000);
+        return { translatedText: translated.join('') };
     }
-    return { translatedText: results };
+    return { translatedText: Array.isArray(texts) ? texts.map(function(){return ''}) : '' };
 }
-
-function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
 
 async function doTranslateRequest(text, source, target, format, apiKey) {
     var settings = await getSettingsAsync();
@@ -220,20 +209,13 @@ async function doTranslateRequest(text, source, target, format, apiKey) {
         if (!endpoint.endsWith('/')) endpoint += '/';
         var resp = await fetch(endpoint + "translate", {
             method: "POST",
-            body: JSON.stringify({
-                q: text, source: source, target: target,
-                format: format, api_key: apiKey
-            }),
+            body: JSON.stringify({ q: text, source: source, target: target, format: format, api_key: apiKey }),
             headers: { "Content-Type": "application/json" }
         });
         return resp.json();
     }
 
-    if (Array.isArray(text)) {
-        return batchTranslateWithBaidu(text, source, target);
-    } else {
-        return translateWithBaidu(text, source, target);
-    }
+    return translateWithBaidu(text, source, target);
 }
 
 // 右键菜单

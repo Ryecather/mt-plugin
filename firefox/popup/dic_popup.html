@@ -9,9 +9,8 @@
         padding-bottom: 5px;
         font-size: 11pt;
         width: 280px !important;
-        max-height: 500px;
-        overflow-y: auto;
-        overflow-x: hidden;
+        max-height: 285px;
+        overflow: hidden;
     }
 
     .navbar {
@@ -37,6 +36,25 @@
         float: right;
         color: black;
         background-color: transparent;
+    }
+
+    .view {
+        height: 245px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: none;
+    }
+
+    .view_main {
+        display: block;
+    }
+
+    .lang_select {
+        width: 100%;
+        height: 36px;
+        border: 1px solid #ccc;
+        padding: 2px;
+        box-sizing: border-box;
     }
 
 </style>
@@ -76,22 +94,34 @@
             <img src="vendor/feathericons/arrow-left.svg" alt="back" />
         </span>
     </div>
-    <label>翻译服务 <select class="setting" data-storename="provider"
-            style="height:40px; margin-bottom:2px; width:100%;">
-        <option value="baidu">百度翻译</option>
-        <option value="custom">自定义 API</option>
-    </select></label>
-    <label>快捷目标语言 <select class="setting" data-storename="default-lang" id="settingsDefaultLang"
-            style="height:40px; margin-bottom:2px; width:100%;">
-    </select></label>
-    <label>百度 APP ID <input type="text" class="setting" data-storename="baidu-appid"
-            style="height:40px; margin-bottom:2px;" /></label>
-    <label>百度 Secret Key <input type="text" class="setting" data-storename="baidu-secret"
-            style="height:40px; margin-bottom:2px;" /></label>
-    <label>API端点 <input type="text" class="setting" data-storename="api-endpoint"
-            style="height: 40px;margin-bottom: 2px;" /></label>
-    <label>API 密钥 <input id="api_key" type="text" class="setting" data-storename="api-key"
-            style="height: 40px;" /></label>
+    <div class="input-line">
+        <label>翻译服务</label>
+        <select class="setting lang_select" data-storename="provider">
+            <option value="baidu">百度翻译</option>
+            <option value="custom">自定义 API</option>
+        </select>
+    </div>
+    <div class="input-line">
+        <label>快捷目标语言</label>
+        <select id="settingsDefaultLang" class="setting lang_select" data-storename="default-lang">
+        </select>
+    </div>
+    <div class="input-line">
+        <label>百度 APP ID</label>
+        <input type="text" class="setting lang_select" data-storename="baidu-appid" />
+    </div>
+    <div class="input-line">
+        <label>百度 Secret Key</label>
+        <input type="text" class="setting lang_select" data-storename="baidu-secret" />
+    </div>
+    <div class="input-line">
+        <label>API端点</label>
+        <input type="text" class="setting lang_select" data-storename="api-endpoint" />
+    </div>
+    <div class="input-line">
+        <label>API 密钥</label>
+        <input id="api_key" type="text" class="setting lang_select" data-storename="api-key" />
+    </div>
     <div style="text-align: right; margin-top:5px;">
         <button id="saveSettings" style="width:100%;height:36px;padding:2px;">保存设置</button>
     </div>

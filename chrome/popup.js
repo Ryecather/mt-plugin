@@ -36,7 +36,7 @@ const FALLBACK_LANGUAGES = [
 ];
 
 
-document.addEventListener('DOMContentLoaded', async function () {
+document.addEventListener('DOMContentLoaded', function () {
     setView('main');
 
     // 翻译按钮事件
@@ -96,25 +96,13 @@ document.addEventListener('DOMContentLoaded', async function () {
         setView('main');
     });
 
-    // 加载语言列表
-    await populateLanguages();
+    // 加载语言列表（同步，直接用内置列表）
+    populateLanguages();
 });
 
-async function populateLanguages() {
-    var languages = null;
-
-    try {
-        var resp = await APIQuery('GET', 'languages', null);
-        if (resp && Array.isArray(resp) && resp.length > 0) {
-            languages = resp;
-        }
-    } catch (e) {
-        console.log('无法从服务器获取语言列表，使用内置列表');
-    }
-
-    if (!languages) {
-        languages = FALLBACK_LANGUAGES;
-    }
+function populateLanguages() {
+    // 直接用内置列表，不请求自定义 API 避免阻塞
+    var languages = FALLBACK_LANGUAGES;
 
     var trFrom = document.getElementById('translatefrom');
     var trTo = document.getElementById('translateto');
@@ -146,7 +134,6 @@ async function populateLanguages() {
         }
         trTo.appendChild(optTo);
 
-        // 同时填充设置的默认语言下拉
         var optSet = document.createElement('option');
         optSet.value = lang.code;
         optSet.innerText = lang.name;
@@ -154,15 +141,13 @@ async function populateLanguages() {
     }
 }
 
-function setView() {
+function setView(name) {
     var views = document.querySelectorAll('.view');
     for (var i = 0; i < views.length; i++) {
         views[i].style.display = 'none';
     }
-    for (var i = 0; i < arguments.length; i++) {
-        var el = document.querySelector('.view_' + arguments[i]);
-        if (el) el.style.display = 'block';
-    }
+    var el = document.querySelector('.view_' + name);
+    if (el) el.style.display = 'block';
 }
 
 /* FIXME 2 functions below are duplicated */

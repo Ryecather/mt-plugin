@@ -145,44 +145,23 @@ var MD5 = (function () {
     return function (s) { return md5(utf8Bytes(s)); };
 })();
 
-// ===== 百度翻译 API（国内可用，需 APP ID + Secret Key）=====
+// ===== 百度翻译 API =====
 var BAIDU_API = 'https://fanyi-api.baidu.com/api/trans/vip/translate';
 
 function toBaiduLang(code) {
     var map = {
-        'auto': 'auto',
-        'zh-CN': 'zh',
-        'zh-TW': 'cht',
-        'zh': 'zh',
-        'en': 'en',
-        'ja': 'jp',
-        'jp': 'jp',
-        'ko': 'kor',
-        'kor': 'kor',
-        'fr': 'fra',
-        'fra': 'fra',
-        'de': 'de',
-        'es': 'spa',
-        'spa': 'spa',
-        'pt': 'pt',
-        'ru': 'ru',
-        'ar': 'ara',
-        'ara': 'ara',
-        'vi': 'vi',
-        'th': 'th',
-        'it': 'it',
-        'nl': 'nl',
-        'pl': 'pl',
-        'tr': 'tr',
-        'id': 'id',
-        'ms': 'ms',
-        'hi': 'hi',
+        'auto': 'auto', 'zh-CN': 'zh', 'zh-TW': 'cht', 'zh': 'zh',
+        'en': 'en', 'ja': 'jp', 'jp': 'jp', 'ko': 'kor', 'kor': 'kor',
+        'fr': 'fra', 'fra': 'fra', 'de': 'de', 'es': 'spa', 'spa': 'spa',
+        'pt': 'pt', 'ru': 'ru', 'ar': 'ara', 'ara': 'ara', 'vi': 'vi',
+        'th': 'th', 'it': 'it', 'nl': 'nl', 'pl': 'pl', 'tr': 'tr',
+        'id': 'id', 'ms': 'ms', 'hi': 'hi',
     };
     return map[code] || (code || '');
 }
 
-async function translateWithBaidu(text, source, target) {
-    if (!text) return { translatedText: '' };
+async function translateWithBaidu(texts, source, target) {
+    if (!texts || (Array.isArray(texts) && texts.length === 0)) return { translatedText: [] };
 
     var settings = await getSettingsAsync();
     var appid = settings['baidu-appid'] || '';
@@ -193,10 +172,12 @@ async function translateWithBaidu(text, source, target) {
     var tgtLang = toBaiduLang(target);
     if (!tgtLang) throw new Error('目标语言不能为空');
 
+    // 多条文本用 \n 分隔，百度 API 原生支持批量
+    var rawText = Array.isArray(texts) ? texts.join('\n') : texts;
     var salt = String(Date.now());
-    var sign = MD5(appid + text + salt + secretKey);
+    var sign = MD5(appid + rawText + salt + secretKey);
 
-    var body = 'q=' + encodeURIComponent(text)
+    var body = 'q=' + encodeURIComponent(rawText)
         + '&from=' + srcLang
         + '&to=' + tgtLang
         + '&appid=' + appid
@@ -210,35 +191,22 @@ async function translateWithBaidu(text, source, target) {
     });
     if (!resp.ok) throw new Error('Baidu HTTP ' + resp.status);
     var data = await resp.json();
-    // 响应: {"from":"en","to":"zh","trans_result":[{"src":"hello","dst":"你好"}]}
     if (data.error_code) {
         throw new Error('Baidu error ' + data.error_code + ': ' + (data.error_msg || ''));
     }
-    var translated = '';
+
+    // 百度按 \n 分隔返回多个 trans_result，每条对应一个片段
     if (data.trans_result && data.trans_result.length > 0) {
-        translated = data.trans_result.map(function (r) { return r.dst; }).join('');
-    }
-    return { translatedText: translated };
-}
-
-// 逐个翻译（百度免费 QPS=1，间隔 1 秒，配合仅译 block 元素通常<20 段）
-function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
-
-async function batchTranslateWithBaidu(texts, source, target) {
-    var results = new Array(texts.length);
-    for (var i = 0; i < texts.length; i++) {
-        try {
-            var r = await translateWithBaidu(texts[i], source, target);
-            results[i] = r.translatedText;
-        } catch(e) {
-            results[i] = texts[i];
+        var translated = data.trans_result.map(function (r) { return r.dst; });
+        if (Array.isArray(texts)) {
+            return { translatedText: translated };
         }
-        if (i < texts.length - 1) await sleep(1000);
+        return { translatedText: translated.join('') };
     }
-    return { translatedText: results };
+    return { translatedText: Array.isArray(texts) ? texts.map(function(){return ''}) : '' };
 }
 
-// 翻译路由：百度 或 自定义 API
+// 翻译路由
 async function doTranslateRequest(text, source, target, format, apiKey) {
     var settings = await getSettingsAsync();
     var provider = settings['provider'] || 'baidu';
@@ -248,21 +216,14 @@ async function doTranslateRequest(text, source, target, format, apiKey) {
         if (!endpoint.endsWith('/')) endpoint += '/';
         var resp = await fetch(endpoint + "translate", {
             method: "POST",
-            body: JSON.stringify({
-                q: text, source: source, target: target,
-                format: format, api_key: apiKey
-            }),
+            body: JSON.stringify({ q: text, source: source, target: target, format: format, api_key: apiKey }),
             headers: { "Content-Type": "application/json" }
         });
         return resp.json();
     }
 
-    // 默认百度翻译
-    if (Array.isArray(text)) {
-        return batchTranslateWithBaidu(text, source, target);
-    } else {
-        return translateWithBaidu(text, source, target);
-    }
+    // 百度：单条和多条统一走 translateWithBaidu，\n 批量
+    return translateWithBaidu(text, source, target);
 }
 
 // 创建取词翻译语言菜单（常用12种）

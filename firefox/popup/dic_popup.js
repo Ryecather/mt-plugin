@@ -36,9 +36,8 @@ const FALLBACK_LANGUAGES = [
 ];
 
 
-document.addEventListener('DOMContentLoaded', async function () {
-    await populateLanguages();
-
+document.addEventListener('DOMContentLoaded', function () {
+    populateLanguages();
     setView('main');
 
     document.getElementById('doTranslate').addEventListener('click', async function () {
@@ -94,21 +93,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     });
 });
 
-async function populateLanguages() {
-    var languages = null;
-
-    try {
-        var resp = await APIQuery('GET', 'languages', null);
-        if (resp && Array.isArray(resp) && resp.length > 0) {
-            languages = resp;
-        }
-    } catch (e) {
-        console.log('无法从服务器获取语言列表，使用内置列表');
-    }
-
-    if (!languages) {
-        languages = FALLBACK_LANGUAGES;
-    }
+function populateLanguages() {
+    var languages = FALLBACK_LANGUAGES;
 
     var trTo = document.getElementById('translateto');
     var trFrom = document.getElementById('translatefrom');
@@ -148,15 +134,13 @@ async function populateLanguages() {
 }
 
 
-function setView() {
+function setView(name) {
     var views = document.querySelectorAll('.view');
     for (var i = 0; i < views.length; i++) {
         views[i].style.display = 'none';
     }
-    for (var i = 0; i < arguments.length; i++) {
-        var el = document.querySelector('.view_' + arguments[i]);
-        if (el) el.style.display = 'block';
-    }
+    var el = document.querySelector('.view_' + name);
+    if (el) el.style.display = 'block';
 }
 
 document.getElementById('goback').addEventListener('click', async function () {
