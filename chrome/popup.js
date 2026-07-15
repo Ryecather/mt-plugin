@@ -53,11 +53,9 @@ document.addEventListener('DOMContentLoaded', function () {
         window.close();
     });
 
-    // 恢复网页按钮事件
+    // 恢复网页（不刷新，原地还原原文）
     document.getElementById('goback').addEventListener('click', async function () {
-        chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-            chrome.tabs.reload(tabs[0].id);
-        });
+        await chrome.runtime.sendMessage({ action: "restore" });
         window.close();
     });
 

@@ -323,6 +323,23 @@ browser.runtime.onMessage.addListener(
 
             return true;
         }
+        if (request.action === "restore") {
+            browser.tabs.query({ active: true }).then(function (tabs) {
+                if (!tabs || tabs.length === 0) {
+                    console.log('Restore: no active tab');
+                    sendResponse(null);
+                    return;
+                }
+                return browser.scripting.executeScript({
+                    target: { tabId: tabs[0].id },
+                    func: restorePage,
+                }).then(function () { sendResponse(null); });
+            }).catch(function (err) {
+                console.log('Restore failed:', err.message);
+                sendResponse(null);
+            });
+            return true;
+        }
         if (request.action === "inject") {
             browser.tabs.query({ active: true }).then(function (tabId) {
                 console.log(tabId);
@@ -404,6 +421,8 @@ async function doTranslate(sl, tl, ak) {
     var __nodesToTranslate = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'li', 'td', 'th'];
     var __translationCache = {};
 
+    if (!window.__ltOriginalTitle) window.__ltOriginalTitle = document.title;
+
     if (document.title && document.title.trim()) {
         var resp = await translate(document.title, 'text', sl, tl);
         if (resp && resp.text) document.title = resp.text;
@@ -424,6 +443,7 @@ async function doTranslate(sl, tl, ak) {
     translateDom();
 
     async function translateDom() {
+        if (!window.__ltActive) return;
         var nodes = findtranslatableElements();
         if (sl == 'auto') {
             sl = await detectLanguage(nodes);
@@ -499,6 +519,7 @@ async function doTranslate(sl, tl, ak) {
                 var respText = texttranslations[i];
                 var req = textRequests[i];
                 if (req.text.length <= 100) __translationCache[req.text] = respText;
+                if (!req.node.dataset.__ltOriginal) req.node.dataset.__ltOriginal = req.text;
                 req.node.innerText = respText;
                 setNodeTranslated(req.node);
             }
@@ -511,6 +532,7 @@ async function doTranslate(sl, tl, ak) {
                 var respHtml = htmltranslations[i];
                 var reqHtml = htmlRequests[i];
                 if (reqHtml.text.length <= 200) __translationCache[reqHtml.text] = respHtml;
+                if (!reqHtml.node.dataset.__ltOriginal) reqHtml.node.dataset.__ltOriginal = reqHtml.text;
                 reqHtml.node.innerHTML = respHtml;
                 setNodeTranslated(reqHtml.node);
                 if (reqHtml.node.childNodes) {
@@ -642,4 +664,33 @@ async function doTranslate(sl, tl, ak) {
             action: "translate", type: type, text: txt, sl: sl, tl: tl, ak: ak
         });
     }
+}
+
+function restorePage() {
+    if (typeof window.__ltActive === 'undefined' || !window.__ltActive) return;
+    var nodes = document.querySelectorAll('[data-__lt-translated="true"]');
+    for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        var original = n.dataset.__ltOriginal;
+        var isChild = false;
+        var p = n.parentNode;
+        while (p && p !== document.documentElement) {
+            if (p.dataset && p.dataset.__ltTranslated === 'true') { isChild = true; break; }
+            p = p.parentNode;
+        }
+        if (isChild) continue;
+        if (original !== undefined) {
+            if (n.innerHTML !== n.innerText || (n.children && n.children.length > 0)) {
+                n.innerHTML = original;
+            } else {
+                n.innerText = original;
+            }
+        }
+        delete n.dataset.__ltOriginal;
+        delete n.dataset.__ltTranslated;
+        delete n.dataset.__ltQueued;
+    }
+    document.title = (window.__ltOriginalTitle) || document.title;
+    delete window.__ltOriginalTitle;
+    window.__ltActive = false;
 }

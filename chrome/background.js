@@ -331,6 +331,30 @@ chrome.runtime.onMessage.addListener(
             return true;
         }
 
+        if (request.action === "restore") {
+            console.log('Restore page');
+
+            chrome.tabs.query({ active: true })
+                .then(function (tabs) {
+                    if (!tabs || tabs.length === 0) {
+                        console.log('Restore: no active tab');
+                        sendResponse(null);
+                        return;
+                    }
+                    return chrome.scripting.executeScript({
+                        target: { tabId: tabs[0].id },
+                        func: restorePage
+                    });
+                })
+                .then(function () { sendResponse(null); })
+                .catch(function (err) {
+                    console.log('Restore failed:', err.message);
+                    sendResponse(null);
+                });
+
+            return true;
+        }
+
         if (request.action === "inject") {
             console.log('Inject script for translation');
 
@@ -410,6 +434,8 @@ async function doTranslate(sl, tl, ak) {
                               'p', 'div', 'li', 'td', 'th'];
     var __translationCache = {};
 
+    if (!window.__ltOriginalTitle) window.__ltOriginalTitle = document.title;
+
     if (document.title && document.title.trim()) {
         var resp = await translate(document.title, 'text', sl, tl);
         if (resp && resp.translatedText) document.title = resp.translatedText;
@@ -435,6 +461,7 @@ async function doTranslate(sl, tl, ak) {
     translateDom();
 
     async function translateDom() {
+        if (!window.__ltActive) return;
         var nodes = findtranslatableElements();
         translateNodes(nodes, sl, tl);
     }
@@ -485,6 +512,7 @@ async function doTranslate(sl, tl, ak) {
                 var req = textRequests[i];
 
                 if (req.text.length <= 100) __translationCache[req.text] = respText;
+                if (!req.node.dataset.__ltOriginal) req.node.dataset.__ltOriginal = req.text;
                 req.node.innerText = respText;
                 setNodeTranslated(req.node);
             }
@@ -500,6 +528,7 @@ async function doTranslate(sl, tl, ak) {
                 var reqHtml = htmlRequests[i];
 
                 if (reqHtml.text.length <= 200) __translationCache[reqHtml.text] = respHtml;
+                if (!reqHtml.node.dataset.__ltOriginal) reqHtml.node.dataset.__ltOriginal = reqHtml.text;
                 reqHtml.node.innerHTML = respHtml;
                 setNodeTranslated(reqHtml.node);
 
@@ -622,4 +651,35 @@ async function doTranslate(sl, tl, ak) {
             action: "translate", type: type, text: txt, sl: sl, tl: tl, ak: ak
         });
     }
+}
+
+// 恢复网页（独立函数，注入到页面执行）
+function restorePage() {
+    if (typeof window.__ltActive === 'undefined' || !window.__ltActive) return;
+    var nodes = document.querySelectorAll('[data-__lt-translated="true"]');
+    for (var i = 0; i < nodes.length; i++) {
+        var n = nodes[i];
+        var original = n.dataset.__ltOriginal;
+        // 只恢复顶级节点（父节点不在翻译列表中）
+        var isChild = false;
+        var p = n.parentNode;
+        while (p && p !== document.documentElement) {
+            if (p.dataset && p.dataset.__ltTranslated === 'true') { isChild = true; break; }
+            p = p.parentNode;
+        }
+        if (isChild) continue;
+        if (original !== undefined) {
+            if (n.innerHTML !== n.innerText || (n.children && n.children.length > 0)) {
+                n.innerHTML = original;
+            } else {
+                n.innerText = original;
+            }
+        }
+        delete n.dataset.__ltOriginal;
+        delete n.dataset.__ltTranslated;
+        delete n.dataset.__ltQueued;
+    }
+    document.title = (window.__ltOriginalTitle) || document.title;
+    delete window.__ltOriginalTitle;
+    window.__ltActive = false;
 }
