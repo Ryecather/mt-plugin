@@ -168,7 +168,15 @@ async function translateWithBaidu(texts, source, target) {
     var tgtLang = toBaiduLang(target);
     if (!tgtLang) throw new Error('目标语言不能为空');
 
-    var rawText = Array.isArray(texts) ? texts.join('\n') : texts;
+    // 多条文本批量翻译：用 \n 分隔，但 text 自身可能含 \n（如 <br>），
+    // 所以先把文本内的 \n 替换为占位符，join 后再发请求，结果再换回来。
+    var NL = ''; // Unicode PUA，正常文本中几乎不可能出现
+    var rawText;
+    if (Array.isArray(texts)) {
+        rawText = texts.map(function (t) { return t.replace(/\n/g, NL); }).join('\n');
+    } else {
+        rawText = texts;
+    }
     var salt = String(Date.now());
     var sign = MD5(appid + rawText + salt + secretKey);
 
@@ -190,8 +198,9 @@ async function translateWithBaidu(texts, source, target) {
         throw new Error('Baidu error ' + data.error_code + ': ' + (data.error_msg || ''));
     }
 
+    // 百度按 \n 分隔返回多个 trans_result，每条对应一个片段
     if (data.trans_result && data.trans_result.length > 0) {
-        var translated = data.trans_result.map(function (r) { return r.dst; });
+        var translated = data.trans_result.map(function (r) { return r.dst.replace(new RegExp(NL, 'g'), '\n'); });
         if (Array.isArray(texts)) {
             return { translatedText: translated };
         }
@@ -488,60 +497,104 @@ async function doTranslate(sl, tl, ak) {
         return responses;
     }
 
+    // 从 HTML 字符串中移除翻译标记属性，防止还原后出现"僵尸"已翻译节点
+    function stripTranslationAttrs(html) {
+        return html.replace(/\s*data-__lt-(?:original|translated|queued|original-type)(?:\s*=\s*"[^"]*")?/gi, '');
+    }
+
+    // 将翻译文本应用到节点，同时保留子元素（如 <a> 链接）DOM 结构
+    function applyTranslationToNode(node, translatedText) {
+        // 纯文本节点：直接替换 innerText
+        if (node.innerHTML === node.innerText) {
+            node.innerText = translatedText;
+            return;
+        }
+
+        // 收集直接的文本子节点（不包括子元素内部的文本）
+        var textNodes = [];
+        for (var i = 0; i < node.childNodes.length; i++) {
+            if (node.childNodes[i].nodeType === Node.TEXT_NODE) {
+                textNodes.push(node.childNodes[i]);
+            }
+        }
+
+        if (textNodes.length === 0) {
+            // 没有直接文本子节点，如 <p><a>...</a></p>
+            // fallback：替换 innerText（会丢失子元素，但很少见）
+            node.innerText = translatedText;
+            return;
+        }
+
+        // 只有一个直接文本子节点：直接设置值
+        if (textNodes.length === 1) {
+            textNodes[0].nodeValue = translatedText;
+            return;
+        }
+
+        // 多个直接文本子节点（被 <a> 等内联元素隔开）
+        // 把翻译结果放进第一个文本节点，清空后面的
+        textNodes[0].nodeValue = translatedText;
+        for (var j = 1; j < textNodes.length; j++) {
+            textNodes[j].nodeValue = '';
+        }
+    }
+
     async function translateNodes(allNodes, sl, tl) {
-        var textRequests = [];
-        var htmlRequests = [];
+        var requests = [];
 
         for (var i = 0; i < allNodes.length; i++) {
             var node = allNodes[i];
+            var text = node.innerText;
+            if (!text || !text.trim()) continue;
 
-            if (node.innerHTML == node.innerText) {
-                if (node.innerText.length <= 100 && __translationCache[node.innerText]) {
-                    node.innerText = __translationCache[node.innerText];
-                    setNodeTranslated(node);
-                    continue;
+            // 跳过内部已有已翻译子节点的节点：
+            // 否则 innerText 里是已翻译文本（再翻译会乱），__ltOriginal 也会存污染数据
+            if (node.querySelector('[data-__lt-translated="true"]')) continue;
+
+            // 缓存命中：只用 innerText 做 key
+            if (text.length <= 100 && __translationCache[text]) {
+                if (!node.dataset.__ltOriginal) {
+                    var isHtmlCache = (node.innerHTML != node.innerText);
+                    if (isHtmlCache) {
+                        node.dataset.__ltOriginal = stripTranslationAttrs(node.innerHTML);
+                        node.dataset.__ltOriginalType = 'html';
+                    } else {
+                        node.dataset.__ltOriginal = text;
+                        node.dataset.__ltOriginalType = 'text';
+                    }
                 }
-                textRequests.push({ text: node.innerText, node: node });
-            } else {
-                if (node.innerHTML.length <= 200 && __translationCache[node.innerHTML]) {
-                    node.innerHTML = __translationCache[node.innerHTML];
-                    setNodeTranslated(node);
-                    continue;
-                }
-                htmlRequests.push({ text: node.innerHTML, node: node });
+                applyTranslationToNode(node, __translationCache[text]);
+                setNodeTranslated(node);
+                continue;
             }
+
+            requests.push({ text: text, node: node });
         }
 
-        if (textRequests.length > 0) {
-            var textResponses = await translateBatch(textRequests.map(function (r) { return r.text; }), 'text', sl, tl);
-            var texttranslations = textResponses.text;
-            for (var i = 0; i < texttranslations.length; i++) {
-                var respText = texttranslations[i];
-                var req = textRequests[i];
-                if (req.text.length <= 100) __translationCache[req.text] = respText;
-                if (!req.node.dataset.__ltOriginal) req.node.dataset.__ltOriginal = req.text;
-                req.node.innerText = respText;
-                setNodeTranslated(req.node);
-            }
-        }
+        if (requests.length === 0) return;
 
-        if (htmlRequests.length > 0) {
-            var htmlResponses = await translateBatch(htmlRequests.map(function (r) { return r.text; }), 'html', sl, tl);
-            var htmltranslations = htmlResponses.text;
-            for (var i = 0; i < htmltranslations.length; i++) {
-                var respHtml = htmltranslations[i];
-                var reqHtml = htmlRequests[i];
-                if (reqHtml.text.length <= 200) __translationCache[reqHtml.text] = respHtml;
-                if (!reqHtml.node.dataset.__ltOriginal) reqHtml.node.dataset.__ltOriginal = reqHtml.text;
-                reqHtml.node.innerHTML = respHtml;
-                setNodeTranslated(reqHtml.node);
-                if (reqHtml.node.childNodes) {
-                    [].slice.call(reqHtml.node.childNodes).forEach(function (n) {
-                        var tagName = n.tagName ? n.tagName.toLowerCase() : '';
-                        if (n && __nodesToTranslate.indexOf(tagName) !== -1) setNodeTranslated(n);
-                    });
+        var responses = await translateBatch(requests.map(function (r) { return r.text; }), 'text', sl, tl);
+        var translations = responses.text;
+        for (var i = 0; i < translations.length; i++) {
+            var respText = translations[i];
+            var req = requests[i];
+
+            if (req.text.length <= 100) __translationCache[req.text] = respText;
+
+            // 保存原始内容和类型，供 restorePage 使用
+            if (!req.node.dataset.__ltOriginal) {
+                var isHtml = (req.node.innerHTML != req.node.innerText);
+                if (isHtml) {
+                    req.node.dataset.__ltOriginal = stripTranslationAttrs(req.node.innerHTML);
+                    req.node.dataset.__ltOriginalType = 'html';
+                } else {
+                    req.node.dataset.__ltOriginal = req.text;
+                    req.node.dataset.__ltOriginalType = 'text';
                 }
             }
+
+            applyTranslationToNode(req.node, respText);
+            setNodeTranslated(req.node);
         }
     }
 
@@ -680,13 +733,14 @@ function restorePage() {
         }
         if (isChild) continue;
         if (original !== undefined) {
-            if (n.innerHTML !== n.innerText || (n.children && n.children.length > 0)) {
+            if (n.dataset.__ltOriginalType === 'html') {
                 n.innerHTML = original;
             } else {
                 n.innerText = original;
             }
         }
         delete n.dataset.__ltOriginal;
+        delete n.dataset.__ltOriginalType;
         delete n.dataset.__ltTranslated;
         delete n.dataset.__ltQueued;
     }
