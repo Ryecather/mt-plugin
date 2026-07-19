@@ -235,6 +235,7 @@ async function doTranslateRequest(text, source, target, format, apiKey) {
 
 // 创建取词翻译语言菜单（常用12种）
 chrome.runtime.onInstalled.addListener(async function () {
+    chrome.contextMenus.removeAll(function () {
     var menuItem = {
         "id": "pickTranslate",
         "title": "YiMT翻译",
@@ -262,6 +263,7 @@ chrome.runtime.onInstalled.addListener(async function () {
         commonLangs[i].parentId = "pickTranslate";
         chrome.contextMenus.create(commonLangs[i]);
     }
+    });
 });
 
 // ===== 快捷键处理：Ctrl+Shift+T = 翻译选中文字 =====
@@ -438,7 +440,10 @@ async function doTranslate(sl, tl, ak) {
     window.__ltActive = true;
 
     var __nodesToTranslate = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-                              'p', 'div', 'li', 'td', 'th'];
+                              'p', 'span', 'div',
+                              'li', 'a', 'label', 'figcaption', 'td', 'th',
+                              'button', 'header',
+                              'em', 'strong', 'b', 'i', 'legend'];
     var __translationCache = {};
 
     if (!window.__ltOriginalTitle) window.__ltOriginalTitle = document.title;

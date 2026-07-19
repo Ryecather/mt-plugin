@@ -427,7 +427,11 @@ async function doTranslate(sl, tl, ak) {
     if (window.__ltActive) return;
     window.__ltActive = true;
 
-    var __nodesToTranslate = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'li', 'td', 'th'];
+    var __nodesToTranslate = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                              'p', 'span', 'div',
+                              'li', 'a', 'label', 'figcaption', 'td', 'th',
+                              'button', 'header',
+                              'em', 'strong', 'b', 'i', 'legend'];
     var __translationCache = {};
 
     if (!window.__ltOriginalTitle) window.__ltOriginalTitle = document.title;
