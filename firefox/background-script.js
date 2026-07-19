@@ -228,14 +228,14 @@ async function doTranslateRequest(text, source, target, format, apiKey) {
 }
 
 // 右键菜单
-var menuItem = {
-    "id": "translate",
-    "title": "翻译",
-    "contexts": ["selection"]
-};
-chrome.contextMenus.create(menuItem);
-
 chrome.runtime.onInstalled.addListener(async function () {
+    chrome.contextMenus.removeAll(function () {
+    chrome.contextMenus.create({
+        "id": "translate",
+        "title": "翻译",
+        "contexts": ["selection"]
+    });
+
     var commonLangs = [
         {id: "zh", title: "中文"},
         {id: "en", title: "英语"},
@@ -259,6 +259,7 @@ chrome.runtime.onInstalled.addListener(async function () {
             "parentId": "translate"
         });
     }
+    });
 });
 
 // 快捷键
