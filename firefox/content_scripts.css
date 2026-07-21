@@ -1,0 +1,69 @@
+/* ===== YiMT 划词翻译气泡 — Shadow DOM 内样式 ===== */
+/* :host 阻断页面样式侵入，all: initial 确保无泄漏 */
+:host {
+    all: initial;
+    position: fixed;
+    z-index: 2147483647;
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    max-width: 420px;
+    background: #292a2d;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #e8eaed;
+}
+
+/* ---- 标题栏 ---- */
+.bubble-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.bubble-title {
+    font-size: 12px;
+    color: #8ab4f8;
+    white-space: nowrap;
+}
+
+.bubble-spacer {
+    flex: 1;
+}
+
+/* ---- 按钮 ---- */
+.bubble-btn {
+    background: none;
+    border: none;
+    color: #9aa0a6;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: inherit;
+    font-family: inherit;
+    line-height: inherit;
+}
+
+.bubble-btn:hover {
+    color: #e8eaed;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.bubble-btn-close {
+    font-size: 14px;
+}
+
+/* ---- 翻译内容区域 ---- */
+.bubble-body {
+    padding: 10px 12px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    word-break: break-word;
+}

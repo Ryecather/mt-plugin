@@ -23,6 +23,12 @@
   },
   "background": {
     "scripts": [
+      "lib/md5.js",
+      "lib/lang-list.js",
+      "lib/settings.js",
+      "lib/baidu-translate.js",
+      "lib/injected-translate.js",
+      "lib/injected-restore.js",
       "background-script.js"
     ]
   },

@@ -7,7 +7,8 @@
         "48": "icons/icon-48.png"
     },
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "background.js",
+        "type": "module"
     },
     "content_scripts": [
         {
@@ -35,6 +36,10 @@
     "host_permissions": [
         "https://fanyi-api.baidu.com/"
     ],
+    "web_accessible_resources": [{
+        "resources": ["content_scripts.css"],
+        "matches": ["<all_urls>"]
+    }],
     "commands": {
         "translate-selection": {
             "suggested_key": {
