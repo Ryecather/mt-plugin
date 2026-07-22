@@ -160,13 +160,15 @@ chrome.runtime.onMessage.addListener(
 
             chrome.tabs.query({ active: true })
                 .then(function (tabId) {
-                    return chrome.scripting.executeScript({
+                    chrome.scripting.executeScript({
                         target: { tabId: tabId[0].id },
                         func: doTranslate,
                         args: [request.sl, request.tl, request.api_key],
                     });
-                })
-                .then(function () { sendResponse(null); });
+                });
+
+            // 立即响应，不等待翻译完成，让 popup 能立刻关闭
+            sendResponse(null);
 
             return true;
         }
